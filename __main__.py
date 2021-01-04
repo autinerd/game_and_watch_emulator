@@ -1,5 +1,5 @@
 from unicorn import *
-from .mmu import *
+from .mmu import hook_mem_read, hook_mem_write
 from .hexfile_loader import read_hexfile
 from sys import argv
 import struct
@@ -34,9 +34,8 @@ mu.mem_map(0x9000_0000, 0x10_0000)
 # Debug
 mu.mem_map(0xE000_0000, 0x1_0000)
 
-mu.hook_add(UC_HOOK_MEM_READ | UC_HOOK_MEM_WRITE, hook_mem_read)
-
-mu.hook_add(UC_HOOK_MEM_READ_UNMAPPED | UC_HOOK_MEM_WRITE_UNMAPPED, hook_mem_read)
+mu.hook_add(UC_HOOK_MEM_READ, hook_mem_read)
+mu.hook_add(UC_HOOK_MEM_WRITE, hook_mem_write)
 
 data = read_hexfile(argv[1])
 
@@ -46,5 +45,5 @@ for k, v in data.items():
 mu.reg_write(arm_const.UC_ARM_REG_SP, struct.unpack("<l", data[0x0800_0000][0:4])[0])
 try:
     mu.emu_start(struct.unpack("<l", data[0x0800_0000][4:8])[0], 0xFFFF_FFFF)
-except KeyboardInterrupt:
+except Exception:
     exit(0)

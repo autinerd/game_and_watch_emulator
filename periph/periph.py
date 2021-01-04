@@ -8,6 +8,7 @@ class Periph(ABC):
         """
         pass
 
+    @abstractmethod
     def write_mem(self, address: int, size: int, data: int):
         """
         Returns data to be read by the firmware.
