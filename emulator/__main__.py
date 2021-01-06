@@ -19,6 +19,7 @@ if len(argv) == 1:
 mu = Uc(UC_ARCH_ARM, UC_MODE_ARM)
 
 # peripherals
+mu.mem_map(0x4000_0000, 0xD400)
 mu.mem_map(0x4001_0000, 0x8000)
 mu.mem_map(0x4002_0000, 0x3400)
 mu.mem_map(0x4004_0000, 0x4_0000)
@@ -45,6 +46,8 @@ mu.mem_map(0xE000_0000, 0x1_0000)
 
 mu.hook_add(UC_HOOK_MEM_READ, hook_mem_read)
 mu.hook_add(UC_HOOK_MEM_WRITE, hook_mem_write)
+mu.hook_add(UC_HOOK_MEM_WRITE_UNMAPPED, hook_mem_write)
+mu.hook_add(UC_HOOK_MEM_READ_UNMAPPED, hook_mem_read)
 
 data = read_hexfile(argv[1])
 

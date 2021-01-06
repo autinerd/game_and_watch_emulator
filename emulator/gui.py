@@ -70,13 +70,13 @@ class DrawingAreaFrame(Gtk.Frame):
         self.draw_radial_gradient_rect(ctx)        
 
 class Window(Gtk.Window):
-    def __init__(self):
+    def __init__(self, message_input_queue: Queue = None, message_output_queue: Queue = None):
         Gtk.Window.__init__(self)
         self.set_title("Test Draw Radial Gradient")
         self.set_default_size(800, 600)
         self.connect("destroy", Gtk.main_quit)    
 
-        frame = DrawingAreaFrame()        
+        frame = DrawingAreaFrame(message_input_queue=message_input_queue, message_output_queue=message_output_queue)        
         self.add(frame)
 
 def GUIThread(message_input_queue: Queue, message_output_queue: Queue):

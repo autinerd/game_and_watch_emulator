@@ -10,7 +10,7 @@ class FMC(Periph):
         self._BCR4 = 0x30D2
         self._PCR = 0x18
         self._SDCR1 = 0x2D0
-        self._SDCR2 == 0x2D0
+        self._SDCR2 = 0x2D0
 
     def read_mem(self, address: int, size: int) -> int:
         if address == self.BASE_ADDR:

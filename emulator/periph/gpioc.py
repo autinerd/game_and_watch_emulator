@@ -19,14 +19,14 @@ A14 = DEBUG_SWCLK
 A15 = -
 """
 
-class GPIOA(Periph):
-    BASE_ADDR = 0x5802_0000
+class GPIOC(Periph):
+    BASE_ADDR = 0x5802_0800
 
     def __init__(self):
-        self._MODER = 0xABFF_FFFF
+        self._MODER = 0xFFFF_FFFF
         self._OTYPER = 0
-        self._OSPEEDR = 0x0C00_0000
-        self._PUPDR = 0x6400_0000
+        self._OSPEEDR = 0
+        self._PUPDR = 0
         self._IDR = 0
         self._ODR = 0
         self._BSRR = 0
