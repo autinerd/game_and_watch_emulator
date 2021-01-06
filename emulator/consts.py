@@ -1,0 +1,9 @@
+INPUT_UP = 1 << 0
+INPUT_LEFT = 1 << 1
+INPUT_DOWN = 1 << 2
+INPUT_RIGHT = 1 << 3
+INPUT_B = 1 << 4
+INPUT_A = 1 << 5
+INPUT_SET = 1 << 6
+INPUT_TIME = 1 << 7
+INPUT_GAME = 1 << 8

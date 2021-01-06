@@ -1,14 +1,14 @@
 from .periph import Periph
 
 class PWR(Periph):
-    BASE_ADDR = 0x5208_4800
+    BASE_ADDR = 0x5802_4800
 
     def __init__(self):
         self._CR1 = 0xF000_C000
-        self._CSR1 = 0x4000
+        self._CSR1 = 0x6000
         self._CR3 = 6
         self._CPUCR = 0
-        self._SRDCR = 0x4000
+        self._SRDCR = 0x6000
         self._WKUPEPR = 0
 
     def read_mem(self, address: int, size: int) -> int:
@@ -28,13 +28,13 @@ class PWR(Periph):
 
     def write_mem(self, address: int, size: int, data: int):
         if address == self.BASE_ADDR:
-            self._CR1 = data & 0x0FFF_F3F1
+            self.set_reg('_CR1', 0x0FFF_F3F1, data)
         elif address == self.BASE_ADDR + 0xC:
-            self._CR3 = data & 0x0300_033F
+            self.set_reg('_CR3', 0x0300_033F, data)
         elif address == self.BASE_ADDR + 0x10:
-            self._CPUCR = data & 0x0000_0A05
+            self.set_reg('_CPUCR', 0x0000_0A05, data)
         elif address == self.BASE_ADDR + 0x18:
-            self._SRDCR = data & 0x0000_C000
+            self.set_reg('_SRDCR', 0x0000_C000, data)
         elif address == self.BASE_ADDR + 0x28:
-            self._WKUPEPR = data & 0x0FFF_3F3F
+            self.set_reg('_WKUPEPR', 0x0FFF_3F3F, data)
         

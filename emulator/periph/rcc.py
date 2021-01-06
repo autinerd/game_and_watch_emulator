@@ -1,10 +1,10 @@
 from .periph import Periph
 
 class RCC(Periph):
-    BASE_ADDR = 0x5208_4400
+    BASE_ADDR = 0x5802_4400
 
     def __init__(self):
-        self._CR = 0x25
+        self._CR = 0x0000_0025
         self._HSICFGR = 0x4000_0000
         self._CSICFGR = 0x2000_0000
         self._CFGR = 0
@@ -25,7 +25,7 @@ class RCC(Periph):
         self._SRDCCIPR = 0
         self._CIER = 0
         self._BDCR = 0
-        self._CSR = 0
+        self._CSR = 2
         self._AHB1ENR = 0
         self._AHB3ENR = 0
         self._AHB4ENR = 0
@@ -97,60 +97,69 @@ class RCC(Periph):
 
     def write_mem(self, address: int, size: int, data: int):
         if address == self.BASE_ADDR + 0:
-            self._CR = data & 0x151D_129B
+            self.set_reg('_CR', 0x151D_129B, data)
+            # Set PLL1RDY, PLL2RDY, PLL3RDY if the corresponding PLLxON is written
+            if data & 0x0100_0000:
+                self._CR |= 0x0200_0000
+            if data & 0x0400_0000:
+                self._CR |= 0x0800_0000
+            if data & 0x1000_0000:
+                self._CR |= 0x2000_0000
         if address == self.BASE_ADDR + 4:
-            self._HSICFGR = data & 0x7F00_0000
+            self.set_reg('_HSICFGR', 0x7F00_0000, data)
         if address == self.BASE_ADDR + 0xC:
-            self._CSICFGR = data & 0x3F00_0000
+            self.set_reg('_CSICFGR', 0x3F00_0000, data)
         if address == self.BASE_ADDR + 0x10:
-            self._CFGR = data & 0xFFFC_BFC7
+            self.set_reg('_CFGR', 0xFFFC_BFC7, data)
+            # Set SWS to the corresponding SW bits
+            self._CFGR |= (data & 0x7) << 3
         if address == self.BASE_ADDR + 0x18:
-            self._CDCFGR1 = data & 0x0000_0F7F
+            self.set_reg('_CDCFGR1', 0x0000_0F7F, data)
         if address == self.BASE_ADDR + 0x1C:
-            self._CDCFGR2 = data & 0x0000_0770
+            self.set_reg('_CDCFGR2', 0x0000_0770, data)
         if address == self.BASE_ADDR + 0x20:
-            self._SRDCFGR = data & 0x0000_0070
+            self.set_reg('_SRDCFGR', 0x0000_0070, data)
         if address == self.BASE_ADDR + 0x28:
-            self._PLLCKSELR = data & 0x03F3_F3F3
+            self.set_reg('_PLLCKSELR', 0x03F3_F3F3, data)
         if address == self.BASE_ADDR + 0x2C:
-            self._PLLCFGR = data & 0x01FF_0FFF
+            self.set_reg('_PLLCFGR', 0x01FF_0FFF, data)
         if address == self.BASE_ADDR + 0x30:
-            self._PLL1DIVR = data & 0x7F7F_FFFF
+            self.set_reg('_PLL1DIVR', 0x7F7F_FFFF, data)
         if address == self.BASE_ADDR + 0x34:
-            self._PLL1FRACR = data & 0x0000_FFF8
+            self.set_reg('_PLL1FRACR', 0x0000_FFF8, data)
         if address == self.BASE_ADDR + 0x38:
-            self._PLL2DIVR = data & 0x7F7F_FFFF
+            self.set_reg('_PLL2DIVR', 0x7F7F_FFFF, data)
         if address == self.BASE_ADDR + 0x3C:
-            self._PLL2FRACR = data & 0x0000_FFF8
+            self.set_reg('_PLL2FRACR', 0x0000_FFF8, data)
         if address == self.BASE_ADDR + 0x40:
-            self._PLL3DIVR = data & 0x7F7F_FFFF
+            self.set_reg('_PLL3DIVR', 0x7F7F_FFFF, data)
         if address == self.BASE_ADDR + 0x44:
-            self._PLL3FRACR = data & 0x0000_FFF8
+            self.set_reg('_PLL3FRACR', 0x0000_FFF8, data)
         if address == self.BASE_ADDR + 0x4C:
-            self._CDCCIPR = data & 0x3001_0033
+            self.set_reg('_CDCCIPR', 0x3001_0033, data)
         if address == self.BASE_ADDR + 0x50:
-            self._CDCCIP1R = data & 0xB137_7FC7
+            self.set_reg('_CDCCIP1R', 0xB137_7FC7, data)
         if address == self.BASE_ADDR + 0x54:
-            self._CDCCIP2R = data & 0x70F0_333F
+            self.set_reg('_CDCCIP2R', 0x70F0_333F, data)
         if address == self.BASE_ADDR + 0x58:
-            self._SRDCCIPR = data & 0x7803_FF07
+            self.set_reg('_SRDCCIPR', 0x7803_FF07, data)
         if address == self.BASE_ADDR + 0x60:
-            self._CIER = data & 0x0000_03FF
+            self.set_reg('_CIER', 0x0000_03FF, data)
         if address == self.BASE_ADDR + 0x70:
-            self._BDCR = data & 0x0001_83BD
+            self.set_reg('_BDCR', 0x0001_83BD, data)
         if address == self.BASE_ADDR + 0x74:
-            self._CSR = data & 0x0000_0001
+            self.set_reg('_CSR', 0x0000_0001, data)
         if address == self.BASE_ADDR + 0x138:
-            self._AHB1ENR = data & 0x0600_0223
+            self.set_reg('_AHB1ENR', 0x0600_0223, data)
         if address == self.BASE_ADDR + 0x134:
-            self._AHB3ENR = data & 0x01E9_5031
+            self.set_reg('_AHB3ENR', 0x01E9_5031, data)
         if address == self.BASE_ADDR + 0x140:
-            self._AHB4ENR = data & 0x3020_07FF
+            self.set_reg('_AHB4ENR', 0x3020_07FF, data)
         if address == self.BASE_ADDR + 0x148:
-            self._APB1LENR = data & 0xE8FF_C3FF
+            self.set_reg('_APB1LENR', 0xE8FF_C3FF, data)
         if address == self.BASE_ADDR + 0x150:
-            self._APB2ENR = data & 0x40D7_30F3
+            self.set_reg('_APB2ENR', 0x40D7_30F3, data)
         if address == self.BASE_ADDR + 0x144:
-            self._APB3ENR = data & 0x0000_0048
+            self.set_reg('_APB3ENR', 0x0000_0048, data)
         if address == self.BASE_ADDR + 0x154:
-            self._APB4ENR = data & 0x3020_07FF
+            self.set_reg('_APB4ENR', 0x3020_07FF, data)
