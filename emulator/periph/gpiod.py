@@ -1,22 +1,12 @@
 from .periph import Periph
 
 """
-A0 = POWER_BUTTON
-A1 = EXTFLASH_SIO3
-A2 = BATMAN_PGOOD
-A3 = Q3E
-A4 = Q3B
-A5 = Q2B
-A6 = Q1B
-A7 = LCD_VSYNC
-A8 = LCD_R6
-A9 = LCD_R5
-A10 = LCD_B4
-A11 = LCD_R4
-A12 = -
-A13 = DEBUG_SWDIO
-A14 = DEBUG_SWCLK
-A15 = -
+D0  = BUTTON_UP
+D4  = BUTTON_B
+D9  = BUTTON_A
+D11 = BUTTON_LEFT
+D14 = BUTTON_DOWN
+D15 = BUTTON_RIGHT
 """
 
 class GPIOD(Periph):
@@ -27,7 +17,7 @@ class GPIOD(Periph):
         self._OTYPER = 0
         self._OSPEEDR = 0
         self._PUPDR = 0
-        self._IDR = 0
+        self._IDR = (1 << 15) | (1 << 14) | (1 << 11) | (1 << 9) | (1 << 4) | 1
         self._ODR = 0
         self._BSRR = 0
         self._LCKR = 0

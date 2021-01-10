@@ -1,6 +1,7 @@
 from unicorn import unicorn_const, Uc, arm_const
 from .periph import *
 import struct
+import time
 
 periphs = [
     ("FLASH", flash.FLASH(), 0x5200_2000, 0x5200_2FFF),
@@ -18,7 +19,8 @@ periphs = [
     ("GPIOJ", gpioj.GPIOJ(), 0x5802_2400, 0x5802_27FF),
     ("GPIOK", gpiok.GPIOK(), 0x5802_2800, 0x5802_2BFF),
     ("FMC", fmc.FMC(), 0x5200_4000, 0x5200_4FFF),
-    ("LTDC", ltdc.LTDC(), 0x5000_1000, 0x5000_1FFF)
+    ("LTDC", ltdc.LTDC(), 0x5000_1000, 0x5000_1FFF),
+    ("RTC", rtc.RTC(), 0x5800_4000, 0x5800_43FF)
 ]
 
 def hook_mem_read(mu: Uc, access, address, size, value, user_data):
@@ -29,12 +31,14 @@ def hook_mem_read(mu: Uc, access, address, size, value, user_data):
                 if _between(address, periph[2], periph[3]):
                     data = periph[1].read_mem(address, size)
                     mu.mem_write(address, struct.pack('<L', data))
-                    print(periph[0])
+                    #print(periph[0])
                     break
             if address >= 0x4000_0000 and address <= 0x6000_0000:
-                print(f'access: read,  address: 0x{address:08X}, data: 0x{data:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+                ...
+                #print(f'access: read,  address: 0x{address:08X}, data: 0x{data:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
         elif access == unicorn_const.UC_MEM_READ_UNMAPPED:
-            print(f'access unmapped memory: read,  address: 0x{address:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            ...
+            #print(f'access unmapped memory: read,  address: 0x{address:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
     except KeyboardInterrupt:
         mu.emu_stop()
     
@@ -44,12 +48,41 @@ def hook_mem_write(mu, access, address, size, value, user_data):
             for periph in periphs:
                 if _between(address, periph[2], periph[3]):
                     periph[1].write_mem(address, size, value)
-                    print(periph[0])
+                    # print(periph[0])
                     break
-            if address >= 0x4000_0000 and address <= 0x6000_0000:
-                print(f'access: write, address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            if (address >= 0x4000_0000 and address <= 0x6000_0000) or address == 0x2001_774C:
+                ...
+                #print(f'access: write, address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
         elif access == unicorn_const.UC_MEM_READ_UNMAPPED:
-            print(f'access unmapped memory: write,  address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            ...
+            #print(f'access unmapped memory: write,  address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+    except KeyboardInterrupt:
+        mu.emu_stop()
+
+
+_interrupt_handler_mode = False
+_current_clock = time.monotonic_ns()
+_saved_context = None
+
+def hook_code(mu: Uc, address, size, user_data):
+    global _current_clock
+    global _interrupt_handler_mode
+    global _saved_context
+    try:
+        # if _interrupt_handler_mode:
+        #     print(f'access: interrupt, address: 0x{address:08X}, size: {size}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+        if time.monotonic_ns() - _current_clock > 1_000_000 and not _interrupt_handler_mode and address != 0x08010220:
+            # print(f'access: fetch, address: 0x{address:08X}, size: {size}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            _current_clock = time.monotonic_ns()
+            _interrupt_handler_mode = True
+            _saved_context = mu.context_save()
+            mu.reg_write(arm_const.UC_ARM_REG_PC, struct.unpack("<L", mu.mem_read(0x0800_003c, 4))[0])
+        elif _interrupt_handler_mode and mu.mem_read(address, 2) == b'\x70\x47':
+            # print(f'access: interrupt, address: 0x{address:08X}, size: {size}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            mu.context_restore(_saved_context)
+            # print(f'new pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            mu.reg_write(arm_const.UC_ARM_REG_PC, mu.reg_read(arm_const.UC_ARM_REG_PC) + 1)
+            _interrupt_handler_mode = False
     except KeyboardInterrupt:
         mu.emu_stop()
 

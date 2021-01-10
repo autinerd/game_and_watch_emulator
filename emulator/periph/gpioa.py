@@ -1,22 +1,8 @@
 from .periph import Periph
 
 """
-A0 = POWER_BUTTON
-A1 = EXTFLASH_SIO3
+A0 = BUTTON_POWER
 A2 = BATMAN_PGOOD
-A3 = Q3E
-A4 = Q3B
-A5 = Q2B
-A6 = Q1B
-A7 = LCD_VSYNC
-A8 = LCD_R6
-A9 = LCD_R5
-A10 = LCD_B4
-A11 = LCD_R4
-A12 = -
-A13 = DEBUG_SWDIO
-A14 = DEBUG_SWCLK
-A15 = -
 """
 
 class GPIOA(Periph):
@@ -27,7 +13,7 @@ class GPIOA(Periph):
         self._OTYPER = 0
         self._OSPEEDR = 0x0C00_0000
         self._PUPDR = 0x6400_0000
-        self._IDR = 0
+        self._IDR = 1
         self._ODR = 0
         self._BSRR = 0
         self._LCKR = 0
