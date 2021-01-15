@@ -13,5 +13,4 @@ class FLASH(Periph):
 
     def write_mem(self, address: int, size: int, data: int):
         if address == self.BASE_ADDR or address == self.BASE_ADDR + 0x100:
-            # self._ACR = data & 0x0000_003F
             self.set_reg('_ACR', 0x0000_003F, data)

@@ -42,8 +42,7 @@ def _load_win_support(path):
                 ctypes.cdll.LoadLibrary(lib_file)
                 #print('SUCCESS')
                 _loaded_windows_dlls.add(dll)
-            except OSError as e:
-                #print('FAIL to load %s' %lib_file, e)
+            except OSError:
                 continue
 
 # Initial attempt: load all dlls globally
@@ -56,12 +55,9 @@ def _load_lib(path):
             _load_win_support(path)
 
         lib_file = os.path.join(path, _lib.get(sys.platform, 'libunicorn.so'))
-        #print('Trying to load shared library', lib_file)
         dll = ctypes.cdll.LoadLibrary(lib_file)
-        #print('SUCCESS')
         return dll
-    except OSError as e:
-        #print('FAIL to load %s' %lib_file, e)
+    except OSError:
         return None
 
 _uc = None

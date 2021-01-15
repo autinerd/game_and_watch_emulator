@@ -140,4 +140,4 @@ cython_debug/
 *.hex
 *.bin
 .vscode/
-*.so.*
+!libunicorn*

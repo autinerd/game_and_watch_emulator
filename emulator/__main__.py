@@ -1,18 +1,25 @@
 from .unicorn import *
-from .mmu import hook_mem_read, hook_mem_write, periphs, hook_code
+from .mmu import hook_mem_read, hook_mem_write, periphs, hook_code, message_input_queue, message_output_queue, lcd_interrupt_queue
 from .hexfile_loader import read_hexfile
 from sys import argv
 import os
 import struct
 import threading
 from .gui import GUIThread
-from queue import Queue
-
-message_input_queue = Queue()
-message_output_queue = Queue()
 
 if len(argv) == 1:
     exit(1)
+
+hexfile = None
+
+for i in range(len(argv)):
+    if argv[i] == '--hex' and len(argv) == i+2:
+        hexfile = argv[i+1]
+        break
+    elif argv[i] == '--bin':
+        if not os.path.exists('flash_backup.bin') or not os.path.exists('itcm_backup.bin') or not os.path.exists('internal_flash_backup.bin'):
+            exit(2)
+        break
 
 mu = Uc(UC_ARCH_ARM, UC_MODE_ARM)
 
@@ -51,10 +58,18 @@ mu.hook_add(UC_HOOK_MEM_WRITE_UNMAPPED, hook_mem_write)
 mu.hook_add(UC_HOOK_MEM_READ_UNMAPPED, hook_mem_read)
 mu.hook_add(UC_HOOK_CODE, hook_code)
 
-data = read_hexfile(argv[1])
+if hexfile:
+    data = read_hexfile(hexfile)
 
-for k, v in data.items():
-    mu.mem_write(k, bytes(v))
+    for k, v in data.items():
+        mu.mem_write(k, bytes(v))
+else:
+    with open('internal_flash_backup.bin', 'rb') as f:
+        mu.mem_write(0x0800_0000, f.read())
+    with open('flash_backup.bin', 'rb') as f:
+        mu.mem_write(0x9000_0000, f.read())
+    with open('itcm_backup.bin', 'rb') as f:
+        mu.mem_write(0x0000_0000, f.read())
 
 mu.reg_write(arm_const.UC_ARM_REG_SP, struct.unpack("<L", mu.mem_read(0x0800_0000, 4))[0])
 try:
@@ -64,4 +79,8 @@ except UcError as e:
     print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
     os._exit(0)
 except KeyboardInterrupt:
+    os._exit(0)
+except Exception as ex:
+    print(ex)
+    print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
     os._exit(0)

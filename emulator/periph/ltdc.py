@@ -1,5 +1,6 @@
 from .periph import Periph
-
+from .. import consts
+from queue import Queue
 class LTDC(Periph):
     BASE_ADDR = 0x5000_1000
 
@@ -136,7 +137,7 @@ class LTDC(Periph):
         elif address == self.BASE_ADDR + 0x34:
             self.set_reg('_IER', 0x0000_000F, data)
         elif address == self.BASE_ADDR + 0x3C:
-            self.set_reg('_ICR', 0x0000_000F, data)
+            self._ISR &= ~data & 0xF
         elif address == self.BASE_ADDR + 0x40:
             self.set_reg('_LIPCR', 0x0000_0FFF, data)
         elif address == self.BASE_ADDR + 0x84:

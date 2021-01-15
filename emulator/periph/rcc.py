@@ -101,10 +101,20 @@ class RCC(Periph):
             # Set PLL1RDY, PLL2RDY, PLL3RDY if the corresponding PLLxON is written
             if data & 0x0100_0000:
                 self._CR |= 0x0200_0000
+            else:
+                self._CR &= 0xFDFF_FFFF
             if data & 0x0400_0000:
                 self._CR |= 0x0800_0000
+            else:
+                self._CR &= 0xF7FF_FFFF
             if data & 0x1000_0000:
                 self._CR |= 0x2000_0000
+            else:
+                self._CR &= 0xDFFF_FFFF
+            if data & 0x80:
+                self._CR |= 0x100
+            else:
+                self._CR &= 0xFFFF_FEFF
         if address == self.BASE_ADDR + 4:
             self.set_reg('_HSICFGR', 0x7F00_0000, data)
         if address == self.BASE_ADDR + 0xC:
@@ -146,6 +156,10 @@ class RCC(Periph):
         if address == self.BASE_ADDR + 0x60:
             self.set_reg('_CIER', 0x0000_03FF, data)
         if address == self.BASE_ADDR + 0x70:
+            if data & 1:
+                self._BDCR |= 2
+            else:
+                self._BDCR &= 0xFFFF_FFFD
             self.set_reg('_BDCR', 0x0001_83BD, data)
         if address == self.BASE_ADDR + 0x74:
             self.set_reg('_CSR', 0x0000_0001, data)
