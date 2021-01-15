@@ -40,14 +40,14 @@ periphs = [
 def hook_mem_read(mu: Uc, access, address, size, value, user_data):
     try:
         if access == unicorn_const.UC_MEM_READ:
-            data = 0
-            for periph in periphs:
-                if _between(address, periph[2], periph[3]):
-                    data = periph[1].read_mem(address, size)
-                    mu.mem_write(address, struct.pack('<L', data))
-                    print(periph[0])
-                    break
             if address >= 0x4000_0000 and address <= 0x6000_0000:
+                data = 0
+                for periph in periphs:
+                    if _between(address, periph[2], periph[3]):
+                        data = periph[1].read_mem(address, size)
+                        mu.mem_write(address, struct.pack('<L', data))
+                        print(periph[0])
+                        break
                 print(f'access: read,  address: 0x{address:08X}, data: 0x{data:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
         elif access == unicorn_const.UC_MEM_READ_UNMAPPED:
             print(f'access unmapped memory: read,  address: 0x{address:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
@@ -64,8 +64,9 @@ def hook_mem_write(mu: Uc, access, address, size, value, user_data):
                     break
             if address >= 0x4000_0000 and address <= 0x6000_0000:
                 print(f'access: write, address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
-        elif access == unicorn_const.UC_MEM_READ_UNMAPPED:
+        elif access == unicorn_const.UC_MEM_WRITE_UNMAPPED:
             print(f'access unmapped memory: write,  address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+            print(f'data executed: {mu.mem_read(mu.reg_read(arm_const.UC_ARM_REG_PC), 4).hex()}')
     except KeyboardInterrupt:
         mu.emu_stop()
 
@@ -73,12 +74,19 @@ def hook_mem_write(mu: Uc, access, address, size, value, user_data):
 _interrupt_handler_mode = consts.INTERRUPT_NONE
 _current_clock = time.monotonic_ns()
 _saved_context = None
+_last_pc_values = []
 
 def hook_code(mu: Uc, address, size, user_data):
     global _current_clock
     global _interrupt_handler_mode
     global _saved_context
     global lcd
+    global _last_pc_values
+
+    _last_pc_values.append(mu.reg_read(arm_const.UC_ARM_REG_PC))
+    if len(_last_pc_values) > 10:
+        del _last_pc_values[0]
+
     try:
         if lcd[1]._ISR & 8 and _interrupt_handler_mode == consts.INTERRUPT_NONE:
             _saved_context = mu.context_save()
@@ -92,10 +100,12 @@ def hook_code(mu: Uc, address, size, user_data):
             _saved_context = mu.context_save()
             mu.reg_write(arm_const.UC_ARM_REG_PC, struct.unpack("<L", mu.mem_read(0x0800_003c, 4))[0])
         elif _interrupt_handler_mode > consts.INTERRUPT_NONE and mu.mem_read(address, 2) == b'\x70\x47':
-            mu.context_restore(_saved_context)
-            mu.reg_write(arm_const.UC_ARM_REG_PC, mu.reg_read(arm_const.UC_ARM_REG_PC) + 1)
             if lcd_lock.locked() and _interrupt_handler_mode == consts.INTERRUPT_LTDC:
                 lcd_lock.release()
+                print("Leave LCD interrupt")
+            mu.context_restore(_saved_context)
+            _saved_context = None
+            mu.reg_write(arm_const.UC_ARM_REG_PC, mu.reg_read(arm_const.UC_ARM_REG_PC) + 1)
             _interrupt_handler_mode = consts.INTERRUPT_NONE
     except KeyboardInterrupt:
         mu.emu_stop()

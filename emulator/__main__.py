@@ -1,11 +1,12 @@
 from .unicorn import *
-from .mmu import hook_mem_read, hook_mem_write, periphs, hook_code, message_input_queue, message_output_queue, lcd_interrupt_queue
+from .mmu import hook_mem_read, hook_mem_write, periphs, hook_code, message_input_queue, message_output_queue, lcd_interrupt_queue, _last_pc_values
 from .hexfile_loader import read_hexfile
 from sys import argv
 import os
 import struct
 import threading
 from .gui import GUIThread
+import types
 
 if len(argv) == 1:
     exit(1)
@@ -77,10 +78,12 @@ try:
 except UcError as e:
     print(e)
     print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+    print([hex(i) for i in _last_pc_values])
     os._exit(0)
 except KeyboardInterrupt:
     os._exit(0)
 except Exception as ex:
     print(ex)
+    print(ex.with_traceback())
     print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
     os._exit(0)

@@ -8,8 +8,32 @@ import os
 from . import consts
 import numpy
 from PIL import Image, ImageTk
+import threading
 
 WIDTH, HEIGHT = 320, 240
+
+class KeyTracker():
+    last_press_time = {}
+    last_release_time = {}
+
+    def is_pressed(self, keysym):
+        if not keysym in self.last_press_time:
+            return False
+        return time.time() - self.last_press_time[keysym] < .1
+
+    def report_key_press(self, event):
+        if not self.is_pressed(event.keysym):
+            on_key_press(event)
+        self.last_press_time[event.keysym] = time.time()
+
+    def report_key_release(self, event):
+        timer = threading.Timer(.1, self.report_key_release_callback, args=[event])
+        timer.start()
+
+    def report_key_release_callback(self, event):
+        if not self.is_pressed(event.keysym):
+            on_key_release(event)
+        self.last_release_time[event.keysym] = time.time()
 
 def convert_565(data: bytes) -> bytes:
     by = bytearray()
@@ -21,6 +45,12 @@ def convert_565(data: bytes) -> bytes:
         by += bytearray([r, g, b])
     return bytes(by)
 
+def on_key_press(e):
+    print(f"key {e.keysym} down")
+
+def on_key_release(e):
+    print(f"key {e.keysym} up")
+
 def on_closing():
     print("Closing window")
     import sys
@@ -30,6 +60,9 @@ def on_closing():
 def GUIThread(message_input_queue: Queue, message_output_queue: Queue, mu: Uc):
     window = tkinter.Tk(className="Game and Watch Emulator")
     window.title = "Game and Watch Emulator"
+    key_tracker = KeyTracker()
+    window.bind_all('<KeyPress>', key_tracker.report_key_press)
+    window.bind_all('<KeyRelease>', key_tracker.report_key_release)
     canvas = tkinter.Canvas(window, width=WIDTH, height=HEIGHT, bg="#000000")
     img = None
     label = tkinter.Label(window, text="Test")
