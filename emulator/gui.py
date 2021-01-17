@@ -83,7 +83,7 @@ def GUIThread(message_input_queue: Queue, message_output_queue: Queue, mu: Uc):
     t = time.monotonic_ns()
 
     while True:
-        if time.monotonic_ns() - t < 1_000_000_000 / 60:
+        if time.monotonic_ns() - t < 1_000_000_000 / 30:
             time.sleep(0.01)
             continue
         t = time.monotonic_ns()
@@ -111,7 +111,7 @@ def GUIThread(message_input_queue: Queue, message_output_queue: Queue, mu: Uc):
                     old_data = data
 
                     if ltdc._IER & 8:
-                        print("Put interrupt")
+                        # print("Put interrupt")
                         ltdc._ISR |= 8
         label.configure(text=f"LTDC on: {bool(ltdc._GCR & 1)}, Pixel format: {ltdc._L1PFCR}, default color: 0x{ltdc._L1DCCR:08X}, PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}\nFramebuffer 1: 0x{fb_addr:08X}, Framebuffer 1 width: {width}, framebuffer height: {height}\n" + 
         f"X1: {ltdc._L1WHPCR & 0xFFFF}, X2: {ltdc._L1WHPCR >> 16}, Y1: {ltdc._L1WVPCR & 0xFFFF}, Y2: {ltdc._L1WVPCR >> 16}\n" + 

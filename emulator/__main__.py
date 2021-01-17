@@ -1,5 +1,5 @@
 from .unicorn import *
-from .mmu import hook_mem_read, hook_mem_write, periphs, hook_code, message_input_queue, message_output_queue, lcd_interrupt_queue, _last_pc_values
+from .mmu import hook_mem_read, hook_mem_write, hook_mem_fetch, periphs, hook_code, message_input_queue, message_output_queue, lcd_interrupt_queue, _last_pc_values, hook_intr
 from .hexfile_loader import read_hexfile
 from sys import argv
 import os
@@ -53,11 +53,15 @@ mu.mem_map(0x9000_0000, 0x10_0000)
 # Debug
 mu.mem_map(0xE000_0000, 0x1_0000)
 
+mu.mem_map(0xFFFF_F000, 0x1000)
+
 mu.hook_add(UC_HOOK_MEM_READ, hook_mem_read)
 mu.hook_add(UC_HOOK_MEM_WRITE, hook_mem_write)
 mu.hook_add(UC_HOOK_MEM_WRITE_UNMAPPED, hook_mem_write)
 mu.hook_add(UC_HOOK_MEM_READ_UNMAPPED, hook_mem_read)
+mu.hook_add(UC_HOOK_MEM_FETCH, hook_mem_fetch)
 mu.hook_add(UC_HOOK_CODE, hook_code)
+mu.hook_add(UC_HOOK_INTR, hook_intr)
 
 if hexfile:
     data = read_hexfile(hexfile)
