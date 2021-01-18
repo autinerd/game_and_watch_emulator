@@ -32,13 +32,6 @@ class GPIOA(Periph):
         elif address == self.BASE_ADDR + 0xC:
             return self._PUPDR
         elif address == self.BASE_ADDR + 0x10:
-            if self._IDR & 1:
-                ret = self._IDR
-                if self.POWER_BUTTON_COUNT == 0:
-                    self._IDR &= ~1 & 0xFFFF_FFFF
-                else:
-                    self.POWER_BUTTON_COUNT -= 1
-                return ret
             return self._IDR
         elif address == self.BASE_ADDR + 0x14:
             return self._ODR

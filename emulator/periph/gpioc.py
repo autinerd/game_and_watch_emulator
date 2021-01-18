@@ -14,7 +14,7 @@ class GPIOC(Periph):
         self._OTYPER = 0
         self._OSPEEDR = 0
         self._PUPDR = 0
-        self._IDR = 0
+        self._IDR = 1 << 13 | 1 << 5 | 1 << 1
         self._ODR = 0
         self._BSRR = 0
         self._LCKR = 0

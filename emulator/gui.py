@@ -1,7 +1,7 @@
 import tkinter
 import time
 from queue import Queue
-from .mmu import periphs, lcd_lock
+from .mmu import periphs, lcd_lock, lcd
 from .unicorn import arm_const, Uc
 from struct import unpack
 import os
@@ -33,6 +33,7 @@ class KeyTracker():
     def report_key_release_callback(self, event):
         if not self.is_pressed(event.keysym):
             on_key_release(event)
+            del self.last_press_time[event.keysym]
         self.last_release_time[event.keysym] = time.time()
 
 def convert_565(data: bytes) -> bytes:
@@ -45,11 +46,47 @@ def convert_565(data: bytes) -> bytes:
         by += bytearray([r, g, b])
     return bytes(by)
 
-def on_key_press(e):
-    print(f"key {e.keysym} down")
+gpiod_field = 1 << 15 | 1 << 14 | 1 << 11 | 1 << 9 | 1 << 4 | 1
 
 def on_key_release(e):
-    print(f"key {e.keysym} up")
+    global gpiod_field
+    s = e.keysym
+    if s == 'Up':
+        gpiod_field |= 1
+    elif s == 'Left':
+        gpiod_field |= 1 << 11
+    elif s == 'Right':
+        gpiod_field |= 1 << 15
+    elif s == 'Down':
+        gpiod_field |= 1 << 14
+    elif s == 'x':
+        # B button
+        gpiod_field |= 1 << 5
+    elif s == 'c':
+        # A button
+        gpiod_field |= 1 << 9
+    print(f"key !{e.keysym}! up")
+    [p for p in periphs if p[0] == "GPIOD"][0][1]._IDR = gpiod_field
+
+def on_key_press(e):
+    global gpiod_field
+    s = e.keysym
+    if s == 'Up':
+        gpiod_field &= ~1 & 0xFFFF_FFFF
+    elif s == 'Left':
+        gpiod_field &= ~(1 << 11) & 0xFFFF_FFFF
+    elif s == 'Right':
+        gpiod_field &= ~(1 << 15) & 0xFFFF_FFFF
+    elif s == 'Down':
+        gpiod_field &= ~(1 << 14) & 0xFFFF_FFFF
+    elif s == 'x':
+        # B button
+        gpiod_field &= ~(1 << 5) & 0xFFFF_FFFF
+    elif s == 'c':
+        # A button
+        gpiod_field &= ~(1 << 9) & 0xFFFF_FFFF
+    print(f"key {e.keysym} down")
+    [p for p in periphs if p[0] == "GPIOD"][0][1]._IDR = gpiod_field
 
 def on_closing():
     print("Closing window")
@@ -82,13 +119,21 @@ def GUIThread(message_input_queue: Queue, message_output_queue: Queue, mu: Uc):
 
     t = time.monotonic_ns()
 
+    ltdc = lcd[1]
+    gpiod = [p for p in periphs if p[0] == "GPIOD"][0][1]
+
     while True:
+        label.configure(text=f"LTDC on: {bool(ltdc._GCR & 1)}, Pixel format: {ltdc._L1PFCR}, default color: 0x{ltdc._L1DCCR:08X}, PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}\nFramebuffer 1: 0x{ltdc._L1CFBAR:08X}, Framebuffer 1 width: {ltdc._L1CFBLR >> 17}, framebuffer height: {ltdc._L1CFBLNR}\n" + 
+        f"X1: {ltdc._L1WHPCR & 0xFFFF}, X2: {ltdc._L1WHPCR >> 16}, Y1: {ltdc._L1WVPCR & 0xFFFF}, Y2: {ltdc._L1WVPCR >> 16}\n" + 
+        f"Layer 1 enabled: {bool(ltdc._L1CR & 1)}, Layer 2 enabled: {bool(ltdc._L2CR & 1)}, Interrupt enabled: {ltdc._IER}\n" +
+        f"GPIOD: MODE: {gpiod._MODER:08X}, PUPDR: {gpiod._PUPDR:08X}, IDR: {gpiod._IDR:08X}\n")
+        window.update_idletasks()
+        window.update()
         if time.monotonic_ns() - t < 1_000_000_000 / 30:
             time.sleep(0.01)
             continue
         t = time.monotonic_ns()
         with lcd_lock:
-            ltdc = [p for p in periphs if p[0] == 'LTDC'][0][1]
             window_width = ltdc._AWCR >> 16
             window_height = ltdc._AWCR & 0xFFFF
             X1 = ltdc._L1WHPCR & 0xFFFF
@@ -109,12 +154,6 @@ def GUIThread(message_input_queue: Queue, message_output_queue: Queue, mu: Uc):
                     img = ImageTk.PhotoImage(image=Image.frombytes("RGB", (width, height), convert_565(data)).resize(((window_width-sync_width)*scale, (window_height-sync_height)*scale)))
                     canvas.create_image((window_width-sync_width)*scale/2, (window_height-sync_height)*scale/2, image=img)
                     old_data = data
-
                     if ltdc._IER & 8:
                         # print("Put interrupt")
                         ltdc._ISR |= 8
-        label.configure(text=f"LTDC on: {bool(ltdc._GCR & 1)}, Pixel format: {ltdc._L1PFCR}, default color: 0x{ltdc._L1DCCR:08X}, PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}\nFramebuffer 1: 0x{fb_addr:08X}, Framebuffer 1 width: {width}, framebuffer height: {height}\n" + 
-        f"X1: {ltdc._L1WHPCR & 0xFFFF}, X2: {ltdc._L1WHPCR >> 16}, Y1: {ltdc._L1WVPCR & 0xFFFF}, Y2: {ltdc._L1WVPCR >> 16}\n" + 
-        f"Layer 1 enabled: {bool(ltdc._L1CR & 1)}, Layer 2 enabled: {bool(ltdc._L2CR & 1)}, Interrupt enabled: {ltdc._IER}")
-        window.update_idletasks()
-        window.update()

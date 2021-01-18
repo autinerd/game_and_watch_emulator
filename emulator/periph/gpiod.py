@@ -2,7 +2,7 @@ from .periph import Periph
 
 """
 D0  = BUTTON_UP
-D4  = BUTTON_B
+D5  = BUTTON_B
 D9  = BUTTON_A
 D11 = BUTTON_LEFT
 D14 = BUTTON_DOWN
@@ -17,7 +17,7 @@ class GPIOD(Periph):
         self._OTYPER = 0
         self._OSPEEDR = 0
         self._PUPDR = 0
-        self._IDR = 0
+        self._IDR = 1 << 15 | 1 << 14 | 1 << 11 | 1 << 9 | 1 << 5 | 1
         self._ODR = 0
         self._BSRR = 0
         self._LCKR = 0

@@ -1,7 +1,7 @@
 from .unicorn import *
 from .mmu import hook_mem_read, hook_mem_write, hook_mem_fetch, periphs, hook_code, message_input_queue, message_output_queue, lcd_interrupt_queue, _last_pc_values, hook_intr
 from .hexfile_loader import read_hexfile
-from sys import argv
+from sys import argv, stdout, stderr
 import os
 import struct
 import threading
@@ -82,12 +82,18 @@ try:
 except UcError as e:
     print(e)
     print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+    print(f'Content: {mu.mem_read(mu.reg_read(arm_const.UC_ARM_REG_PC), 4).hex()}')
     print([hex(i) for i in _last_pc_values])
+    stdout.flush()
+    stderr.flush()
     os._exit(0)
 except KeyboardInterrupt:
     os._exit(0)
 except Exception as ex:
     print(ex)
     print(ex.with_traceback())
+    print(f'Content: {mu.mem_read(mu.reg_read(arm_const.UC_ARM_REG_PC), 4).hex()}')
     print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+    stdout.flush()
+    stderr.flush()
     os._exit(0)

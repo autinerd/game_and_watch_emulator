@@ -2,6 +2,7 @@ from unicorn import unicorn_const, Uc, arm_const
 from .periph import *
 import struct
 import time
+import sys
 from queue import Queue
 from . import consts
 from threading import Lock
@@ -40,7 +41,8 @@ periphs = [
     ("SPI2", spi2.SPI2(), 0x4000_3800, 0x4000_3BFF),
     ("OCTOSPI1", octospi1.OCTOSPI1(), 0x5200_5000, 0x5200_5FFF),
     ("OCTOSPIM", octospim.OCTOSPIM(), 0x5200_B400, 0x5200_B7FF),
-    ("TIM5", tim5.TIM5(), 0x4000_0C00, 0x4000_0FFF)
+    ("TIM5", tim5.TIM5(), 0x4000_0C00, 0x4000_0FFF),
+    ("SAI1", sai1.SAI1(), 0x4001_5800, 0x4001_5BFF)
 ]
 
 def hook_mem_read(mu: Uc, access, address, size, value, user_data):
@@ -48,13 +50,15 @@ def hook_mem_read(mu: Uc, access, address, size, value, user_data):
         if access == unicorn_const.UC_MEM_READ:
             if address >= 0x4000_0000 and address <= 0x6000_0000:
                 data = 0
+                handled = False
                 for periph in periphs:
                     if _between(address, periph[2], periph[3]):
                         data = periph[1].read_mem(address, size)
                         mu.mem_write(address, struct.pack('<L', data))
-                        # print(periph[0])
+                        print(periph[0])
+                        handled = True
                         break
-                # print(f'access: read,  address: 0x{address:08X}, data: 0x{data:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+                print(f'access: read,  address: 0x{address:08X}, data: 0x{data:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
         elif access == unicorn_const.UC_MEM_READ_UNMAPPED:
             print(f'access unmapped memory: read,  address: 0x{address:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
             print(f'data executed: {mu.mem_read(mu.reg_read(arm_const.UC_ARM_REG_PC), 4).hex()}')
@@ -67,10 +71,10 @@ def hook_mem_write(mu: Uc, access, address, size, value, user_data):
             for periph in periphs:
                 if _between(address, periph[2], periph[3]):
                     periph[1].write_mem(address, size, value)
-                    # print(periph[0])
+                    print(periph[0])
                     break
             if address >= 0x4000_0000 and address <= 0x6000_0000:
-                # print(f'access: write, address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+                print(f'access: write, address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
                 ...
         elif access == unicorn_const.UC_MEM_WRITE_UNMAPPED:
             print(f'access unmapped memory: write,  address: 0x{address:08X}, value: 0x{value:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
@@ -85,19 +89,14 @@ def hook_mem_fetch(mu: Uc, access, address, size, value, user_data):
     global lcd
     global _last_pc_values
 
-    _last_pc_values.append(mu.reg_read(arm_const.UC_ARM_REG_PC))
-    if len(_last_pc_values) > 100:
-        del _last_pc_values[0]
-
     if address == 0xFFFF_FFF0 and _interrupt_handler_mode > consts.INTERRUPT_NONE:
-        print("Fetch with interrupt")
+        # print("Fetch with interrupt")
         if lcd_lock.locked() and _interrupt_handler_mode == consts.INTERRUPT_LTDC:
             lcd_lock.release()
             # print("Leave LCD interrupt")
         mu.context_restore(_saved_context)
         _saved_context = None
         mu.reg_write(arm_const.UC_ARM_REG_PC, mu.reg_read(arm_const.UC_ARM_REG_PC) + 1)
-        mu.mem_write(0xFFFF_FFF0, b'\x78\x47')
         _interrupt_handler_mode = consts.INTERRUPT_NONE
     elif address == 0xFFFF_FFF0:
         print("Fetch but no interrupt")
@@ -117,14 +116,15 @@ def hook_intr(mu: Uc, intr_code: int, user_data):
         mu.context_restore(_saved_context)
         _saved_context = None
         mu.reg_write(arm_const.UC_ARM_REG_PC, mu.reg_read(arm_const.UC_ARM_REG_PC) + 1)
-        mu.mem_write(0xFFFF_FFF0, b'\x78\x47')
         _interrupt_handler_mode = consts.INTERRUPT_NONE
-    # print(f"CPU interrupt: {intr_code}")
-    # print(f"saved context = None? : {_saved_context == None}")
-    # print(f"Interrupt handler mode: {_interrupt_handler_mode}")
-    # print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
-    # print([hex(i) for i in _last_pc_values])
-    # os._exit(0)
+        return
+    print(f"CPU interrupt: {intr_code}")
+    print(f"saved context = None? : {_saved_context == None}")
+    print(f"Interrupt handler mode: {_interrupt_handler_mode}")
+    print(f'PC: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
+    print([hex(i) for i in _last_pc_values])
+    sys.stdout.flush()
+    os._exit(0)
 
 def hook_code(mu: Uc, address, size, user_data):
     global _current_clock
@@ -132,6 +132,10 @@ def hook_code(mu: Uc, address, size, user_data):
     global _saved_context
     global lcd
     global _last_pc_values
+
+    _last_pc_values.append(mu.reg_read(arm_const.UC_ARM_REG_PC))
+    if len(_last_pc_values) > 250:
+        del _last_pc_values[0]
 
     try:
         if lcd[1]._ISR & 8 and _interrupt_handler_mode == consts.INTERRUPT_NONE:
