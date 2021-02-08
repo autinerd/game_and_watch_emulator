@@ -50,13 +50,11 @@ def hook_mem_read(mu: Uc, access, address, size, value, user_data):
         if access == unicorn_const.UC_MEM_READ:
             if address >= 0x4000_0000 and address <= 0x6000_0000:
                 data = 0
-                handled = False
                 for periph in periphs:
                     if _between(address, periph[2], periph[3]):
                         data = periph[1].read_mem(address, size)
                         mu.mem_write(address, struct.pack('<L', data))
                         print(periph[0])
-                        handled = True
                         break
                 print(f'access: read,  address: 0x{address:08X}, data: 0x{data:08X}, pc: 0x{mu.reg_read(arm_const.UC_ARM_REG_PC):08X}')
         elif access == unicorn_const.UC_MEM_READ_UNMAPPED:
@@ -136,6 +134,10 @@ def hook_code(mu: Uc, address, size, user_data):
     _last_pc_values.append(mu.reg_read(arm_const.UC_ARM_REG_PC))
     if len(_last_pc_values) > 250:
         del _last_pc_values[0]
+
+    # if mu.mem_read(mu.reg_read(arm_const.UC_ARM_REG_PC), 2) == b'\x30\xbf':
+    #     mu.reg_write(arm_const.UC_ARM_REG_PC, mu.reg_read(arm_const.UC_ARM_REG_PC) + 3)
+    #     return
 
     try:
         if lcd[1]._ISR & 8 and _interrupt_handler_mode == consts.INTERRUPT_NONE:
